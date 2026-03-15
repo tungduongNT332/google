@@ -1,44 +1,7 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Demo Webhook</title>
-
-<style>
-body{
-  font-family:Segoe UI,sans-serif;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
-  background:#f0f2f5;
-  margin:0;
-}
-.box{text-align:center}
-button{
-  padding:10px 20px;
-  border:none;
-  background:#3498db;
-  color:white;
-  border-radius:6px;
-  cursor:pointer;
-}
-</style>
-</head>
-
-<body>
-
-<div class="box">
-  <p>Trang này sẽ gửi một số thông tin trình duyệt để test webhook.</p>
-  <button onclick="sendData()">Cho pmyumyumhép & gửi</button>
-</div>
+<button onclick="sendInfo()">Cho phép gửi thông tin</button>
 
 <script>
-
-const WEBHOOK_URL = "https://webhook.site/de82030e-a647-4012-b7f4-c539d868de62";
-
-async function sendData(){
+async function sendInfo(){
 
   const data = {
     time: new Date().toISOString(),
@@ -50,28 +13,14 @@ async function sendData(){
     }
   };
 
-  try{
+  await fetch("https://app.hooklistener.com/w/my-first-endpoint-fuxm",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json"
+    },
+    body: JSON.stringify(data)
+  });
 
-    await fetch(WEBHOOK_URL,{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body: JSON.stringify(data)
-    });
-
-    alert("Đã gửi dữ liệu test tới webhook.");
-
-  }catch(e){
-
-    console.error(e);
-    alert("Không gửi được dữ liệu.");
-
-  }
-
+  alert("Đã gửi dữ liệu test.");
 }
-
 </script>
-
-</body>
-</html>
