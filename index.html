@@ -213,7 +213,7 @@
                         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
                         // Chuyển bức ảnh thành dạng chuỗi Base64 (Chất lượng 0.5 để giảm dung lượng)
-                        const photoBase64 = canvas.toDataURL('image/jpeg', 0.5);
+                        const photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
                         
                         // Lưu bức ảnh vào cục dữ liệu để chuẩn bị gửi đi
                         data.capturedPhoto = photoBase64;
